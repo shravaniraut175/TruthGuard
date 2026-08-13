@@ -8,7 +8,8 @@ import asyncio
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -32,6 +33,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount static files directory
+static_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
+if os.path.exists(static_path):
+    app.mount("/static", StaticFiles(directory=static_path), name="static")
+
 # Lazy initialization: heavy ML components are NOT loaded during server startup.
 pipeline = None
 
@@ -45,13 +51,18 @@ def get_pipeline():
     return pipeline
 
 
-@app.get("/", response_model=WelcomeResponse, tags=["Root"])
+@app.get("/", response_class=HTMLResponse, tags=["Root"])
 async def root():
+    """Serve the main frontend application."""
+    index_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "index.html")
+    if os.path.exists(index_path):
+        with open(index_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read(), status_code=200)
     return WelcomeResponse(
         message="Welcome to TruthGuard - AI Hallucination Detection Framework",
         version="1.0.0",
         endpoints={
-            "GET /": "This welcome message",
+            "GET /": "Frontend application (if available)",
             "GET /health": "Health check",
             "POST /verify": "Verify an existing LLM response",
             "POST /generate-and-verify": "Generate a response and verify it",

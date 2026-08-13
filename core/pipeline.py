@@ -122,11 +122,6 @@ class VerificationPipeline:
             provider=settings.BASE_PROVIDER,
             model_name=settings.BASE_MODEL,
         )
-progress_callback(
-    "blackbox",
-    "Checking response consistency...",
-    25
-)
 
         # -----------------------------------------------------------
         # Stage 2: White-box confidence

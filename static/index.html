@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TruthGuard - AI Response Verification</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --background: 220 20% 7%;
+            --foreground: 210 20% 90%;
+            --card: 220 18% 10%;
+            --card-foreground: 210 20% 90%;
+            --primary: 175 70% 45%;
+            --primary-foreground: 220 20% 7%;
+            --secondary: 220 15% 16%;
+            --muted: 220 15% 14%;
+            --muted-foreground: 215 15% 50%;
+            --accent: 175 50% 30%;
+            --border: 220 15% 18%;
+            --ring: 175 70% 45%;
+            --radius: 0.5rem;
+            --accurate: 150 70% 45%;
+            --partial: 40 90% 55%;
+            --hallucinated: 0 72% 55%;
+            --gradient-hero: linear-gradient(180deg, hsl(220 20% 7%) 0%, hsl(220 25% 5%) 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: hsl(var(--background));
+            color: hsl(var(--foreground));
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        /* Header */
+        header {
+            border-bottom: 1px solid hsl(var(--border));
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            background: hsl(var(--background) / 0.95);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            background: linear-gradient(135deg, hsl(175 70% 45%), hsl(190 60% 35%));
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: hsl(var(--foreground));
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.375rem 0.75rem;
+            background: hsl(140 50% 20%);
+            color: hsl(140 70% 60%);
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            background: currentColor;
+            border-radius: 50%;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 3rem 0;
+            background: var(--gradient-hero);
+        }
+
+        .hero-content {
+            max-width: 800px;
+        }
+
+        .hero-kicker {
+            color: hsl(230 70% 70%);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .hero-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, hsl(var(--foreground)), hsl(var(--muted-foreground)));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-description {
+            color: hsl(var(--muted-foreground));
+            font-size: 1rem;
+            line-height: 1.7;
+            max-width: 600px;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid hsl(var(--border));
+            padding-bottom: 0;
+        }
+
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: hsl(var(--muted-foreground));
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-button:hover {
+            color: hsl(var(--foreground));
+        }
+
+        .tab-button.active {
+            color: hsl(var(--primary));
+            border-bottom-color: hsl(var(--primary));
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: hsl(var(--foreground));
+        }
+
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            color: hsl(var(--foreground));
+            font-family: inherit;
+            font-size: 0.875rem;
+            resize: vertical;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        textarea:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: hsl(var(--primary));
+            box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+        }
+
+        textarea {
+            min-height: 120px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        input[type="checkbox"] {
+            width: 1rem;
+            height: 1rem;
+            accent-color: hsl(var(--primary));
+        }
+
+        .checkbox-label {
+            font-size: 0.875rem;
+            color: hsl(var(--muted-foreground));
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-radius: var(--radius);
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, hsl(175 70% 45%), hsl(190 60% 35%));
+            color: hsl(var(--primary-foreground));
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Pipeline */
+        .pipeline-section {
+            margin: 2rem 0;
+            display: none;
+        }
+
+        .pipeline-section.active {
+            display: block;
+        }
+
+        .pipeline-heading {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: hsl(var(--foreground));
+        }
+
+        .pipeline-box {
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 1rem;
+            padding: 1.25rem;
+        }
+
+        .stage {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border-radius: 0.75rem;
+            background: hsl(var(--muted) / 0.5);
+            border: 1px solid hsl(var(--border));
+        }
+
+        .stage.done .stage-icon {
+            background: hsl(140 70% 20% / 0.3);
+            color: hsl(140 70% 60%);
+        }
+
+        .stage.active .stage-icon {
+            background: hsl(175 70% 20% / 0.3);
+            color: hsl(175 70% 60%);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .stage.waiting .stage-icon {
+            background: hsl(var(--muted));
+            color: hsl(var(--muted-foreground));
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .stage-icon {
+            width: 1.75rem;
+            height: 1.75rem;
+            min-width: 1.75rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .stage-body {
+            flex: 1;
+        }
+
+        .stage-name {
+            color: hsl(var(--foreground));
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .stage-message {
+            color: hsl(var(--muted-foreground));
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+
+        .stage-status {
+            color: hsl(var(--muted-foreground));
+            font-size: 0.7rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 0.25rem;
+            background: hsl(var(--muted));
+            border-radius: 9999px;
+            margin-top: 1rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, hsl(175 70% 45%), hsl(190 60% 35%));
+            border-radius: 9999px;
+            transition: width 0.3s ease;
+        }
+
+        /* Results */
+        .results-section {
+            margin: 2rem 0;
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            margin: 1.5rem 0 1rem;
+            color: hsl(var(--foreground));
+        }
+
+        .risk-banner {
+            padding: 1rem 1.25rem;
+            border-radius: 0.75rem;
+            text-align: center;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            margin: 1rem 0;
+            border: 1px solid;
+        }
+
+        .risk-low {
+            color: hsl(140 70% 60%);
+            background: hsl(140 70% 20% / 0.2);
+            border-color: hsl(140 70% 40% / 0.4);
+        }
+
+        .risk-medium {
+            color: hsl(40 90% 65%);
+            background: hsl(40 90% 20% / 0.2);
+            border-color: hsl(40 90% 40% / 0.4);
+        }
+
+        .risk-high {
+            color: hsl(0 72% 65%);
+            background: hsl(0 72% 20% / 0.2);
+            border-color: hsl(0 72% 40% / 0.4);
+        }
+
+        .risk-critical {
+            color: hsl(0 72% 70%);
+            background: hsl(0 72% 25% / 0.3);
+            border-color: hsl(0 72% 50% / 0.5);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .metric-card {
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+        }
+
+        .metric-label {
+            color: hsl(var(--muted-foreground));
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+        }
+
+        .metric-value {
+            color: hsl(var(--foreground));
+            font-size: 1.75rem;
+            font-weight: 800;
+            margin-top: 0.5rem;
+        }
+
+        .metric-note {
+            color: hsl(var(--muted-foreground));
+            font-size: 0.7rem;
+            margin-top: 0.25rem;
+        }
+
+        .content-card {
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            color: hsl(var(--foreground));
+            line-height: 1.7;
+            font-size: 0.875rem;
+            white-space: pre-wrap;
+        }
+
+        .module-item {
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 0.625rem;
+            padding: 0.875rem 1rem;
+            margin: 0.5rem 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .module-name {
+            color: hsl(var(--foreground));
+            font-size: 0.875rem;
+        }
+
+        .module-score {
+            color: hsl(var(--muted-foreground));
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .evidence-item {
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin: 0.75rem 0;
+        }
+
+        .evidence-title {
+            color: hsl(var(--foreground));
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .evidence-meta {
+            color: hsl(var(--muted-foreground));
+            font-size: 0.7rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .evidence-text {
+            color: hsl(var(--muted-foreground));
+            font-size: 0.8rem;
+            line-height: 1.5;
+        }
+
+        .evidence-link {
+            display: inline-block;
+            margin-top: 0.5rem;
+            color: hsl(var(--primary));
+            font-size: 0.75rem;
+            text-decoration: none;
+        }
+
+        .evidence-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid hsl(var(--border));
+            padding: 2rem 0;
+            margin-top: 3rem;
+            text-align: center;
+            color: hsl(var(--muted-foreground));
+            font-size: 0.75rem;
+        }
+
+        /* Utility */
+        .hidden {
+            display: none !important;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid hsl(var(--muted));
+            border-top-color: hsl(var(--primary));
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 1.75rem;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tabs {
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container header-content">
+            <div class="logo">
+                <div class="logo-icon">🛡️</div>
+                <span class="logo-text">TruthGuard</span>
+            </div>
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                System Ready
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container hero-content">
+                <div class="hero-kicker">AI Trust & Verification</div>
+                <h1 class="hero-title">Verify before you trust.</h1>
+                <p class="hero-description">TruthGuard checks AI-generated responses using consistency analysis, external evidence, independent judging and score fusion. See exactly what happens at every stage.</p>
+            </div>
+        </section>
+
+        <div class="container">
+            <div class="tabs">
+                <button class="tab-button active" data-tab="generate">✨ Generate & Verify</button>
+                <button class="tab-button" data-tab="verify">🔍 Verify Existing</button>
+            </div>
+
+            <!-- Generate & Verify Tab -->
+            <div id="generate-tab" class="tab-content active">
+                <div class="form-group">
+                    <label for="generate-prompt">Your question</label>
+                    <textarea id="generate-prompt" placeholder="Example: Explain the difference between supervised and unsupervised learning."></textarea>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="generate-regenerate">
+                    <label class="checkbox-label" for="generate-regenerate">Regenerate automatically if hallucination risk is high</label>
+                </div>
+                <button class="btn btn-primary" id="generate-btn">
+                    <span>✨ Generate & Verify</span>
+                </button>
+            </div>
+
+            <!-- Verify Existing Tab -->
+            <div id="verify-tab" class="tab-content hidden">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div class="form-group">
+                        <label for="verify-prompt">Original question</label>
+                        <textarea id="verify-prompt" placeholder="Example: Who was the first person to walk on the Moon?"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="verify-response">AI-generated response</label>
+                        <textarea id="verify-response" placeholder="Paste the response you want TruthGuard to check..."></textarea>
+                    </div>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="verify-regenerate">
+                    <label class="checkbox-label" for="verify-regenerate">Regenerate automatically if hallucination risk is high</label>
+                </div>
+                <button class="btn btn-primary" id="verify-btn">
+                    <span>🔍 Verify Response</span>
+                </button>
+            </div>
+
+            <!-- Pipeline Progress -->
+            <div id="pipeline-section" class="pipeline-section">
+                <h3 class="pipeline-heading">🛡️ Verification Pipeline</h3>
+                <div class="pipeline-box" id="pipeline-stages">
+                    <!-- Stages will be inserted here -->
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-section" class="results-section">
+                <h3 class="section-title">Verification Result</h3>
+                <div id="risk-banner" class="risk-banner"></div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Truth Score</div>
+                        <div class="metric-value" id="truth-score">-</div>
+                        <div class="metric-note">Higher is better</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Confidence</div>
+                        <div class="metric-value" id="confidence-score">-</div>
+                        <div class="metric-note">Combined confidence</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Hallucination Probability</div>
+                        <div class="metric-value" id="hallucination-prob">-</div>
+                        <div class="metric-note">Lower is better</div>
+                    </div>
+                </div>
+
+                <h3 class="section-title">AI Response</h3>
+                <div id="ai-response" class="content-card"></div>
+
+                <h3 class="section-title">Why TruthGuard gave this result</h3>
+                <div id="explanation" class="content-card"></div>
+
+                <h3 class="section-title">Detection Modules</h3>
+                <div id="modules-container"></div>
+
+                <h3 class="section-title">Evidence & Sources</h3>
+                <div id="evidence-container"></div>
+
+                <div id="regeneration-section" class="hidden">
+                    <h3 class="section-title">🔄 Safer Regenerated Response</h3>
+                    <div id="regenerated-response" class="content-card"></div>
+                    <div id="regeneration-explanation" class="content-card" style="margin-top: 1rem;"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>🛡️ TruthGuard · Multi-signal AI hallucination detection<br>Transparent · Evidence-aware · Explainable</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_BASE = window.location.origin;
+        
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                
+                btn.classList.add('active');
+                const tabId = btn.dataset.tab + '-tab';
+                document.getElementById(tabId).classList.remove('hidden');
+                
+                // Hide results when switching tabs
+                document.getElementById('pipeline-section').classList.remove('active');
+                document.getElementById('results-section').classList.remove('active');
+            });
+        });
+
+        // Format percentage
+        function formatPercent(value) {
+            if (value === null || value === undefined) return 'N/A';
+            return `${(value * 100).toFixed(1)}%`;
+        }
+
+        // Get risk class
+        function getRiskClass(risk) {
+            const r = (risk || 'unknown').toLowerCase();
+            if (r === 'low') return 'risk-low';
+            if (r === 'medium') return 'risk-medium';
+            if (r === 'high') return 'risk-high';
+            if (r === 'critical') return 'risk-critical';
+            return '';
+        }
+
+        // Render pipeline stages
+        function renderPipeline(stages, currentStage, progress, message) {
+            const container = document.getElementById('pipeline-stages');
+            const stageOrder = ['generation', 'blackbox', 'whitebox', 'grounding', 'judge', 'fusion', 'regeneration', 'complete'];
+            const currentIndex = stageOrder.indexOf(currentStage);
+
+            let html = '';
+            stageOrder.forEach((stage, index) => {
+                let state, icon, status, msg;
+                
+                if (currentStage === 'complete' || index < currentIndex) {
+                    state = 'done';
+                    icon = '✓';
+                    status = 'Completed';
+                    msg = stages[stage] || 'Stage completed.';
+                } else if (index === currentIndex) {
+                    state = 'active';
+                    icon = '⟳';
+                    status = 'Running';
+                    msg = message || stages[stage] || 'Processing...';
+                } else {
+                    state = 'waiting';
+                    icon = '○';
+                    status = 'Waiting';
+                    msg = 'Waiting for previous stage.';
+                }
+
+                const stageNames = {
+                    generation: 'Response Generation',
+                    blackbox: 'Black-box Consistency',
+                    whitebox: 'White-box Confidence',
+                    grounding: 'External Grounding',
+                    judge: 'LLM-as-a-Judge',
+                    fusion: 'Score Fusion',
+                    regeneration: 'Safe Regeneration',
+                    complete: 'Final Assessment'
+                };
+
+                html += `
+                    <div class="stage ${state}">
+                        <div class="stage-icon">${icon}</div>
+                        <div class="stage-body">
+                            <div class="stage-name">${stageNames[stage] || stage}</div>
+                            <div class="stage-message">${msg}</div>
+                        </div>
+                        <div class="stage-status">${status}</div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            document.getElementById('progress-fill').style.width = `${progress}%`;
+        }
+
+        // Render results
+        function renderResults(result) {
+            // Risk banner
+            const riskBanner = document.getElementById('risk-banner');
+            const riskLevel = (result.risk_level || 'unknown').toLowerCase();
+            const riskIcon = riskLevel === 'low' ? '✓' : '⚠';
+            riskBanner.className = `risk-banner ${getRiskClass(riskLevel)}`;
+            riskBanner.textContent = `${riskIcon} ${riskLevel.toUpperCase()} HALLUCINATION RISK`;
+
+            // Metrics
+            document.getElementById('truth-score').textContent = formatPercent(result.truth_score);
+            document.getElementById('confidence-score').textContent = formatPercent(result.confidence_score);
+            document.getElementById('hallucination-prob').textContent = formatPercent(result.hallucination_probability);
+
+            // AI Response
+            const response = result.response || result.generated_response || 'No response available';
+            document.getElementById('ai-response').textContent = response;
+
+            // Explanation
+            document.getElementById('explanation').textContent = result.explanation || 'No explanation available.';
+
+            // Modules
+            const modulesContainer = document.getElementById('modules-container');
+            const moduleScores = result.module_scores || {};
+            const modules = [
+                ['Black-box Consistency', 'blackbox'],
+                ['White-box Token Confidence', 'whitebox'],
+                ['LLM-as-a-Judge', 'judge'],
+                ['External Grounding', 'grounding']
+            ];
+
+            let modulesHtml = '';
+            modules.forEach(([name, key]) => {
+                const score = moduleScores[key];
+                const scoreText = score !== null && score !== undefined ? `${(score * 100).toFixed(1)}%` : 'Unavailable';
+                modulesHtml += `
+                    <div class="module-item">
+                        <span class="module-name">${name}</span>
+                        <span class="module-score">${scoreText}</span>
+                    </div>
+                `;
+            });
+            modulesContainer.innerHTML = modulesHtml;
+
+            // Evidence
+            const evidenceContainer = document.getElementById('evidence-container');
+            const evidence = result.evidence || [];
+            const sources = result.sources || [];
+
+            if (evidence.length === 0 && sources.length === 0) {
+                evidenceContainer.innerHTML = '<p style="color: hsl(var(--muted-foreground)); font-size: 0.875rem;">No external sources were returned.</p>';
+            } else {
+                let evidenceHtml = '';
+                evidence.forEach((item, index) => {
+                    evidenceHtml += `
+                        <div class="evidence-item">
+                            <div class="evidence-title">🔎 ${index + 1}. ${item.title || 'Untitled source'}</div>
+                            <div class="evidence-meta">${item.source || 'Unknown source'}</div>
+                            <div class="evidence-text">${item.snippet || 'No snippet available'}</div>
+                            ${item.url ? `<a href="${item.url}" target="_blank" class="evidence-link">Open source ↗</a>` : ''}
+                        </div>
+                    `;
+                });
+                sources.forEach((item, index) => {
+                    if (item.url) {
+                        evidenceHtml += `
+                            <div class="evidence-item">
+                                <a href="${item.url}" target="_blank" class="evidence-link">${index + 1}. ${item.title || 'Source'} ↗</a>
+                            </div>
+                        `;
+                    }
+                });
+                evidenceContainer.innerHTML = evidenceHtml;
+            }
+
+            // Regeneration
+            const regenSection = document.getElementById('regeneration-section');
+            if (result.regeneration_triggered && result.regenerated_response) {
+                regenSection.classList.remove('hidden');
+                document.getElementById('regenerated-response').textContent = result.regenerated_response;
+                document.getElementById('regeneration-explanation').textContent = result.regeneration_explanation || '';
+            } else {
+                regenSection.classList.add('hidden');
+            }
+
+            document.getElementById('results-section').classList.add('active');
+        }
+
+        // Handle generate & verify
+        document.getElementById('generate-btn').addEventListener('click', async () => {
+            const prompt = document.getElementById('generate-prompt').value.trim();
+            const regenerate = document.getElementById('generate-regenerate').checked;
+
+            if (!prompt) {
+                alert('Please enter a question.');
+                return;
+            }
+
+            const btn = document.getElementById('generate-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Processing...';
+
+            document.getElementById('results-section').classList.remove('active');
+            document.getElementById('pipeline-section').classList.add('active');
+
+            const stages = {};
+            
+            try {
+                const response = await fetch(`${API_BASE}/generate-and-verify-stream`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, regenerate })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n').filter(line => line.trim());
+
+                    for (const line of lines) {
+                        try {
+                            const event = JSON.parse(line);
+                            
+                            if (event.type === 'progress') {
+                                stages[event.stage] = event.message;
+                                renderPipeline(stages, event.stage, event.progress, event.message);
+                            } else if (event.type === 'complete') {
+                                renderPipeline(stages, 'complete', 100, 'All verification stages completed.');
+                                renderResults(event.result);
+                            } else if (event.type === 'error') {
+                                throw new Error(event.message);
+                            }
+                        } catch (e) {
+                            console.error('Error parsing event:', e);
+                        }
+                    }
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+                document.getElementById('pipeline-section').classList.remove('active');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>✨ Generate & Verify</span>';
+            }
+        });
+
+        // Handle verify existing
+        document.getElementById('verify-btn').addEventListener('click', async () => {
+            const prompt = document.getElementById('verify-prompt').value.trim();
+            const response = document.getElementById('verify-response').value.trim();
+            const regenerate = document.getElementById('verify-regenerate').checked;
+
+            if (!prompt) {
+                alert('Please enter the original question.');
+                return;
+            }
+            if (!response) {
+                alert('Please paste an AI-generated response.');
+                return;
+            }
+
+            const btn = document.getElementById('verify-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Verifying...';
+
+            document.getElementById('results-section').classList.remove('active');
+
+            try {
+                const res = await fetch(`${API_BASE}/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, response, regenerate })
+                });
+
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+
+                const result = await res.json();
+                renderResults(result);
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🔍 Verify Response</span>';
+            }
+        });
+    </script>
+</body>
+</html>

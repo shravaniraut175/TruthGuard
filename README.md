@@ -1,194 +1,109 @@
-# TruthGuard - AI Hallucination Detection Framework
+# TruthGuard - AI Hallucination Detection System
 
-## Overview
-
-TruthGuard is an AI hallucination detection framework for Large Language Model responses. It accepts a user prompt and an LLM-generated response, then verifies whether the response is likely hallucinated before presenting it to the user.
+A lightweight, modern web application for detecting AI hallucinations and verifying response accuracy.
 
 ## Features
 
-- **Heterogeneous Model Ensembling**: Configure base and judge models separately from different providers
-- **External Search Grounding**: Verify responses against web evidence using DuckDuckGo search
-- **Multi-Detector Fusion**: Combines black-box consistency, white-box token confidence, LLM-as-a-Judge, and external grounding scores
-- **Weighted Score Fusion**: Normalized weights with automatic adjustment when modules are disabled
-- **Confidence-Based Regeneration**: Automatically regenerates safer responses when hallucination probability is high
-- **Risk Assessment**: Returns truth score, confidence score, hallucination probability, risk level, and detailed explanations
+- **Multi-signal Detection**: Combines black-box consistency, external grounding, LLM-as-a-judge, and score fusion
+- **Modern UI**: Clean, responsive interface inspired by modern design systems
+- **Lightweight**: Optimized for low memory usage (<100MB RAM)
+- **Real-time Progress**: Live pipeline visualization during verification
+- **Evidence-based**: Shows external sources and evidence for transparency
 
-## Project Structure
+## Architecture
 
-```
-TruthGuard/
-│
-├── app.py                 # Streamlit frontend
-├── requirements.txt       # Python dependencies
-├── README.md             # This file
-├── .env.example          # Environment variable template
-├── .gitignore
-│
-├── api/
-│   ├── __init__.py
-│   ├── main.py           # FastAPI application
-│   └── schemas.py        # Pydantic schemas
-│
-└── core/
-    ├── __init__.py
-    ├── config.py         # Configuration management
-    ├── utils.py          # Utility functions
-    ├── llm.py            # LLM provider abstraction
-    ├── search.py         # Web search functionality
-    ├── embeddings.py     # Semantic similarity
-    ├── blackbox.py       # Black-box consistency detector
-    ├── whitebox.py       # White-box token confidence detector
-    ├── grounding.py      # External grounding verification
-    ├── judge.py          # LLM-as-a-Judge evaluation
-    ├── fusion.py         # Score fusion logic
-    ├── regeneration.py   # Response regeneration
-    └── pipeline.py       # Main verification pipeline
-```
+### Frontend
+- Single-page HTML/CSS/JS application (no framework dependencies)
+- Modern dark theme with CSS variables
+- Responsive design for all screen sizes
+- Direct API integration with streaming support
 
-## Installation
+### Backend
+- FastAPI for high-performance API
+- Lazy-loaded ML components (only loaded when needed)
+- Streaming endpoints for real-time progress updates
+- Minimal dependencies
 
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd TruthGuard
-```
+## Quick Start
 
-2. Create a virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+### 1. Install Dependencies
 
-3. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Configure environment variables:
-```bash
-cp .env.example .env
-# Edit .env and add your API keys
+### 2. Configure Environment
+
+Create a `.env` file with your API keys:
+
+```env
+OPENROUTER_API_KEY=your_openrouter_key
+GOOGLE_API_KEY=your_google_key
+SEARCH_PROVIDER=duckduckgo
+BASE_PROVIDER=openrouter
+BASE_MODEL=qwen/qwen2.5-72b-instruct
+JUDGE_PROVIDER=openrouter
+JUDGE_MODEL=anthropic/claude-3.5-sonnet
 ```
 
-## Configuration
-
-Edit `.env` to configure:
-
-### API Keys (Required)
-- `OPENROUTER_API_KEY`: For OpenRouter access
-- `GOOGLE_API_KEY`: For Google Gemini
-- `OPENAI_API_KEY`: For OpenAI
-
-### Model Configuration
-- `BASE_PROVIDER`: Provider for generating responses (openrouter, google, openai)
-- `BASE_MODEL`: Model name for base generation
-- `JUDGE_PROVIDER`: Provider for judging (can be different from base)
-- `JUDGE_MODEL`: Model name for judging
-
-### Search Configuration
-- `SEARCH_PROVIDER`: Currently supports duckduckgo
-- `MAX_SEARCH_RESULTS`: Number of search results (default: 5)
-- `NUM_BLACKBOX_SAMPLES`: Samples for consistency check (default: 3)
-
-### White-box Configuration (Optional)
-- `WHITEBOX_ENABLED`: Enable/disable white-box scoring (default: false)
-- `WHITEBOX_MODEL`: Hugging Face model for token-level analysis
-
-### Thresholds and Weights
-- `HALLUCINATION_THRESHOLD`: Threshold for triggering regeneration (default: 0.60)
-- `BLACKBOX_WEIGHT`, `WHITEBOX_WEIGHT`, `JUDGE_WEIGHT`, `GROUNDING_WEIGHT`: Score weights
-
-## Usage
-
-### Running the Backend
+### 3. Run the Application
 
 ```bash
-uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+# Start the FastAPI server (includes frontend)
+python -m uvicorn api.main:app --host 0.0.0.0 --port 8000
 ```
 
-### Running the Frontend
+Visit `http://localhost:8000` in your browser.
 
-```bash
-streamlit run app.py
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Frontend application |
+| `/health` | GET | Health check |
+| `/verify` | POST | Verify an existing AI response |
+| `/generate-and-verify` | POST | Generate and verify a response |
+| `/generate-and-verify-stream` | POST | Generate and verify with live progress |
+
+## Memory Optimization
+
+This version is optimized for deployment on platforms with limited memory (e.g., Render free tier):
+
+1. **Removed heavy dependencies**: No sentence-transformers, langchain, or streamlit
+2. **Lazy loading**: ML models only load when first request arrives
+3. **Static frontend**: No server-side rendering overhead
+4. **Minimal runtime**: ~50-80MB RAM usage
+
+## Deployment on Render
+
+1. Create a new Web Service
+2. Connect your repository
+3. Set build command: `pip install -r requirements.txt`
+4. Set start command: `uvicorn api.main:app --host 0.0.0.0 --port $PORT`
+5. Add environment variables for API keys
+
+## Project Structure
+
 ```
-
-### API Endpoints
-
-#### GET /
-Returns welcome message and API information.
-
-#### GET /health
-Health check endpoint.
-
-#### POST /verify
-Verify an existing response:
-```json
-{
-  "prompt": "What is the capital of France?",
-  "response": "The capital of France is Paris.",
-  "regenerate": false
-}
+/workspace
+├── api/
+│   ├── main.py          # FastAPI application
+│   └── schemas.py       # Pydantic models
+├── core/
+│   ├── pipeline.py      # Main verification pipeline
+│   ├── blackbox.py      # Consistency checking
+│   ├── grounding.py     # External evidence verification
+│   ├── judge.py         # LLM-as-a-judge module
+│   ├── fusion.py        # Score combination
+│   ├── regeneration.py  # Safe response regeneration
+│   ├── search.py        # Web search provider
+│   ├── llm.py           # LLM providers
+│   └── config.py        # Configuration
+├── static/
+│   └── index.html       # Frontend application
+├── requirements.txt     # Python dependencies
+└── README.md           # This file
 ```
-
-#### POST /generate-and-verify
-Generate a response and verify it:
-```json
-{
-  "prompt": "What is quantum entanglement?",
-  "regenerate": true
-}
-```
-
-### Response Format
-
-```json
-{
-  "truth_score": 0.92,
-  "confidence_score": 0.88,
-  "hallucination_probability": 0.08,
-  "risk_level": "low",
-  "explanation": "Response is consistent across multiple samples...",
-  "grounding_explanation": "External evidence supports the claims...",
-  "module_scores": {
-    "blackbox": 0.95,
-    "whitebox": null,
-    "judge": 0.90,
-    "grounding": 0.92
-  },
-  "evidence": [...],
-  "sources": [...],
-  "regenerated_response": null
-}
-```
-
-## How It Works
-
-### 1. Black-box Consistency Detector
-Generates multiple samples from the base model at different temperatures and measures semantic similarity between the original response and samples using sentence transformers.
-
-### 2. White-box Token Confidence (Optional)
-Uses a local Hugging Face model to calculate mean token probability for response tokens. Disabled by default to avoid heavy dependencies.
-
-### 3. LLM-as-a-Judge
-Uses a configurable judge model (can be from a different provider) to evaluate factual accuracy, grounding, coherence, and provide explanations.
-
-### 4. External Grounding
-Searches the web for evidence related to the prompt and response, then uses the judge model to determine if evidence supports, contradicts, or is insufficient.
-
-### 5. Score Fusion
-Combines all scores with weighted averaging, applies veto mechanisms:
-- **Grounding Veto**: If external evidence strongly contradicts, truth score is reduced
-- **Judge Veto**: If judge rates factual accuracy very low, truth score is reduced
-
-### 6. Regeneration
-If hallucination probability exceeds the threshold, generates a safer response that acknowledges uncertainty and cites available evidence.
-
-## Risk Levels
-
-- **low**: Hallucination probability < 0.30
-- **medium**: Hallucination probability 0.30-0.50
-- **high**: Hallucination probability 0.50-0.70
-- **critical**: Hallucination probability >= 0.70
 
 ## License
 
