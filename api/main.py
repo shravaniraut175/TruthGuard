@@ -4,6 +4,11 @@
 import sys
 import os
 
+import json
+import asyncio
+
+from fastapi.responses import StreamingResponse
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -141,6 +146,83 @@ async def verify_response(request: VerifyRequest):
             detail=f"Verification failed: {str(e)}"
         )
 
+@app.post("/generate-and-verify-stream", tags=["Verification"])
+async def generate_and_verify_stream(request: GenerateAndVerifyRequest):
+
+    async def event_stream():
+        progress_queue = asyncio.Queue()
+
+        def progress_callback(stage: str, message: str, progress: int):
+            progress_queue.put_nowait({
+                "type": "progress",
+                "stage": stage,
+                "message": message,
+                "progress": progress
+            })
+
+        task = asyncio.create_task(
+            asyncio.to_thread(
+                pipeline.generate_and_verify,
+                request.prompt,
+                request.regenerate,
+                progress_callback
+            )
+        )
+
+        while not task.done():
+            try:
+                event = await asyncio.wait_for(
+                    progress_queue.get(),
+                    timeout=0.25
+                )
+
+                yield json.dumps(event) + "\n"
+
+            except asyncio.TimeoutError:
+                continue
+
+        while not progress_queue.empty():
+            event = await progress_queue.get()
+            yield json.dumps(event) + "\n"
+
+        try:
+            generated_response, result = await task
+
+            final_result = {
+                "generated_response": generated_response,
+                "prompt": result.prompt,
+                "response": result.response,
+                "truth_score": result.truth_score,
+                "confidence_score": result.confidence_score,
+                "hallucination_probability": result.hallucination_probability,
+                "risk_level": result.risk_level,
+                "explanation": result.explanation,
+                "grounding_explanation": result.grounding_explanation,
+                "module_scores": result.module_scores,
+                "evidence": result.evidence,
+                "sources": result.sources,
+                "regenerated_response": result.regenerated_response,
+                "regeneration_triggered": result.regeneration_triggered,
+                "regeneration_explanation": result.regeneration_explanation,
+                "veto_applied": result.veto_applied,
+                "veto_reason": result.veto_reason
+            }
+
+            yield json.dumps({
+                "type": "complete",
+                "result": final_result
+            }) + "\n"
+
+        except Exception as e:
+            yield json.dumps({
+                "type": "error",
+                "message": str(e)
+            }) + "\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="application/x-ndjson"
+    )
 
 @app.post("/generate-and-verify", response_model=GenerateAndVerifyResponse, tags=["Verification"])
 async def generate_and_verify(request: GenerateAndVerifyRequest):

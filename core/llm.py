@@ -5,6 +5,8 @@ import os
 from abc import ABC, abstractmethod
 from typing import Optional
 
+from click import prompt
+
 from .config import settings
 
 
@@ -96,57 +98,68 @@ class GoogleGeminiProvider(BaseLLMProvider):
         if not self.api_key:
             raise ValueError("GOOGLE_API_KEY is not set")
 
-        import google.generativeai as genai
-        genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel(model_name)
+        from google import genai
+        self.client = genai.Client(api_key=self.api_key)
 
     def generate(self, prompt: str, temperature: float = 0.7) -> str:
         """Generate a response from the model."""
         try:
-            generation_config = {
-                "temperature": temperature,
-            }
-            response = self.model.generate_content(
-                prompt,
-                generation_config=generation_config
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+                config={
+                    "temperature": temperature,
+                }
             )
+
             return response.text or ""
+
         except Exception as e:
-            raise RuntimeError(f"Google Gemini generation failed: {str(e)}")
+            raise RuntimeError(
+                f"Google Gemini generation failed: {str(e)}"
+            )
 
     def generate_json(self, prompt: str, temperature: float = 0.3) -> dict:
         """Generate a JSON response from the model."""
+
         prompt_with_json_instruction = (
-            f"{prompt}\n\nPlease respond with ONLY a valid JSON object. "
+            f"{prompt}\n\n"
+            "Please respond with ONLY a valid JSON object. "
             "Do not include any markdown formatting or additional text."
         )
 
         try:
-            generation_config = {
-                "temperature": temperature,
-            }
-            response = self.model.generate_content(
-                prompt_with_json_instruction,
-                generation_config=generation_config
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt_with_json_instruction,
+                config={
+                    "temperature": temperature,
+                    "response_mime_type": "application/json",
+                }
             )
+
             content = response.text or ""
 
-            import json
             from core.utils import safe_json_parse
 
             result = safe_json_parse(content)
+
             if result is None:
                 start = content.find("{")
                 end = content.rfind("}") + 1
+
                 if start >= 0 and end > start:
                     json_str = content[start:end]
                     result = safe_json_parse(json_str, {})
                 else:
                     result = {}
-            return result
-        except Exception as e:
-            raise RuntimeError(f"Google Gemini JSON generation failed: {str(e)}")
 
+            return result
+
+        except Exception as e:
+            raise RuntimeError(
+                f"Google Gemini JSON generation failed: {str(e)}"
+            )
 
 class OpenAIProvider(BaseLLMProvider):
     """OpenAI provider."""
