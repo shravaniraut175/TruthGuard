@@ -7,7 +7,6 @@ from dataclasses import dataclass, asdict
 
 from .config import settings
 from .blackbox import BlackBoxDetector
-from .whitebox import WhiteBoxDetector
 from .grounding import GroundingModule
 from .judge import JudgeModule
 from .fusion import ScoreFusion
@@ -63,7 +62,7 @@ class VerificationPipeline:
 
     def __init__(self):
         self.blackbox_detector = BlackBoxDetector()
-        self.whitebox_detector = WhiteBoxDetector()
+        self.whitebox_detector = None
         self.grounding_module = GroundingModule()
         self.judge_module = JudgeModule()
         self.score_fusion = ScoreFusion()
@@ -123,13 +122,11 @@ class VerificationPipeline:
             provider=settings.BASE_PROVIDER,
             model_name=settings.BASE_MODEL,
         )
-
-        self._report_progress(
-            progress_callback,
-            "blackbox",
-            "Black-box consistency check completed.",
-            40,
-        )
+progress_callback(
+    "blackbox",
+    "Checking response consistency...",
+    25
+)
 
         # -----------------------------------------------------------
         # Stage 2: White-box confidence
@@ -149,10 +146,7 @@ class VerificationPipeline:
                 45,
             )
 
-        whitebox_result = self.whitebox_detector.detect(
-            prompt=prompt,
-            response=response,
-        )
+        whitebox_result = None
 
         self._report_progress(
             progress_callback,
@@ -226,11 +220,7 @@ class VerificationPipeline:
 
         fusion_result = self.score_fusion.fuse(
             blackbox_result=blackbox_result,
-            whitebox_result=(
-                whitebox_result
-                if whitebox_result.available
-                else None
-            ),
+            whitebox_result= None,
             judge_result=judge_result,
             grounding_result=grounding_result,
         )
