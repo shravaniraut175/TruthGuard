@@ -165,13 +165,10 @@ def main():
     render_header()
     st.markdown('<div class="hero"><div class="hero-kicker">AI Trust & Verification</div><div class="hero-title">Verify before you trust.</div><div class="hero-text">TruthGuard checks AI-generated responses using consistency analysis, external evidence, independent judging and score fusion. See exactly what happens at every stage.</div></div>',unsafe_allow_html=True)
 
-    with st.expander("⚙️ Connection settings",expanded=False):
-        backend=st.text_input("FastAPI backend URL",value="http://localhost:8000")
-        if st.button("Check backend"):
-            try:
-                h=requests.get(f"{backend.rstrip('/')}/health",timeout=5)
-                st.success("TruthGuard backend is online.") if h.ok else st.warning(f"Backend returned HTTP {h.status_code}.")
-            except: st.error("Backend is not reachable.")
+    # Backend URL is configured through Streamlit Secrets in production.
+    # Streamlit Cloud → App Settings → Secrets:
+    # BACKEND_URL = "https://your-truthguard-backend.onrender.com"
+    backend = st.secrets.get("BACKEND_URL", "http://localhost:8000")
 
     st.markdown('<div class="section-title">Choose how you want to verify</div>',unsafe_allow_html=True)
     t1,t2=st.tabs(["🔍 Verify an Existing AI Response","✨ Generate & Verify"])
