@@ -1,5 +1,6 @@
 import json
 import html
+import os
 import requests
 import streamlit as st
 from datetime import datetime
@@ -580,7 +581,7 @@ def main():
     render_header()
     st.markdown('<div class="hero"><div class="hero-kicker">AI Trust & Verification</div><div class="hero-title">Verify before you trust.</div><div class="hero-text">TruthGuard checks AI-generated responses using consistency analysis, external evidence, independent judging and score fusion. See exactly what happens at every stage.</div></div>',unsafe_allow_html=True)
 
-    backend="http://localhost:8000"
+    backend=os.getenv("BACKEND_URL")    
     
     st.markdown('<div class="section-title">Choose how you want to verify</div>',unsafe_allow_html=True)
     t1,t2=st.tabs(["🔍 Verify an Existing AI Response","✨ Generate & Verify"])
