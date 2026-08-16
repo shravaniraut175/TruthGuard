@@ -2,57 +2,458 @@ import json
 import html
 import requests
 import streamlit as st
+from datetime import datetime
 
 st.set_page_config(
     page_title="TruthGuard",
     page_icon="🛡️",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="collapsed"
 )
 
 st.markdown("""
 <style>
-.stApp{background:#070b12}
-[data-testid="stHeader"]{background:transparent}
-.block-container{max-width:1180px;padding-top:1.7rem;padding-bottom:3rem}
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem}
-.brand{display:flex;align-items:center;gap:13px}
-.logo{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#2563eb,#7c3aed);font-size:23px}
-.brand-title{color:#f8fafc;font-size:1.55rem;font-weight:800}
-.brand-subtitle{color:#718096;font-size:.76rem}
-.online{border:1px solid #21412f;background:#0b1711;color:#4ade80;border-radius:999px;padding:7px 12px;font-size:.78rem;font-weight:700}
-.hero{border:1px solid #202a3b;border-radius:24px;padding:34px 38px;background:radial-gradient(circle at 82% 15%,rgba(124,58,237,.18),transparent 30%),radial-gradient(circle at 12% 95%,rgba(37,99,235,.13),transparent 34%),#0c121c;margin-bottom:25px}
-.hero-kicker{color:#8ea7ff;font-size:.76rem;text-transform:uppercase;letter-spacing:1.4px;font-weight:800}
-.hero-title{color:#f8fafc;font-size:2.45rem;line-height:1.1;font-weight:850;letter-spacing:-1.2px;margin-top:8px}
-.hero-text{color:#8f9bad;font-size:.98rem;line-height:1.65;max-width:790px;margin-top:12px}
-.section-title{color:#eef2f7;font-size:1.18rem;font-weight:800;margin:28px 0 5px}
-.section-text{color:#758196;font-size:.84rem;margin-bottom:14px}
-div[data-testid="stTextArea"] textarea{background:#0b111a!important;border:1px solid #253146!important;border-radius:13px!important;color:#edf2f7!important}
-div[data-testid="stTextArea"] textarea:focus{border-color:#4f72ff!important;box-shadow:0 0 0 1px #4f72ff!important}
-div.stButton>button,div.stLinkButton>a{border-radius:11px!important;min-height:44px!important;font-weight:750!important}
-div.stButton>button[kind="primary"]{background:linear-gradient(135deg,#2563eb,#6848e8)!important;border:0!important;color:white!important}
-.pipeline-box{background:#0b111a;border:1px solid #202a3b;border-radius:20px;padding:20px;margin:18px 0 22px}
-.pipeline-heading{color:#f1f5f9;font-size:1rem;font-weight:800;margin-bottom:13px}
-.stage{display:flex;align-items:center;gap:13px;padding:11px 12px;margin:6px 0;border-radius:12px;border:1px solid #1c2636;background:#0e141f}
-.stage-icon{width:29px;height:29px;min-width:29px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.78rem}
-.done .stage-icon{background:rgba(34,197,94,.13);color:#4ade80}
-.active .stage-icon{background:rgba(59,130,246,.14);color:#60a5fa}
-.waiting .stage-icon{background:#171f2d;color:#59667b}
-.stage-body{flex:1}.stage-name{color:#dfe6f0;font-size:.86rem;font-weight:700}.stage-message{color:#6f7c90;font-size:.74rem;margin-top:2px}.stage-status{color:#667388;font-size:.72rem}
-.metric{background:#0e141f;border:1px solid #202a3b;border-radius:17px;padding:18px;min-height:112px}
-.metric-label{color:#78869a;text-transform:uppercase;letter-spacing:.8px;font-size:.71rem;font-weight:800}
-.metric-value{color:#f8fafc;font-size:1.9rem;font-weight:850;margin-top:8px}.metric-help{color:#59667a;font-size:.72rem}
-.risk{border-radius:15px;padding:15px 18px;text-align:center;font-weight:850;letter-spacing:.5px;margin:17px 0;border:1px solid}
-.low{color:#4ade80;background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.25)}
-.medium{color:#fbbf24;background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.25)}
-.high{color:#fb7185;background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.25)}
-.critical{color:#fca5a5;background:rgba(127,29,29,.18);border-color:rgba(239,68,68,.35)}
-.unknown{color:#cbd5e1;background:rgba(100,116,139,.08);border-color:rgba(100,116,139,.22)}
-.content-card{background:#0e141f;border:1px solid #202a3b;border-radius:17px;padding:19px 20px;color:#c3cedd;line-height:1.7}
-.module{background:#0e141f;border:1px solid #202a3b;border-radius:13px;padding:14px 17px;margin:8px 0;color:#dce3ee}.module-score{float:right;color:#aebbd0;font-weight:750}
-.evidence{background:#0e141f;border:1px solid #202a3b;border-radius:15px;padding:16px 18px;margin:9px 0}
-.evidence-title{color:#e7edf5;font-weight:750;font-size:.9rem}.evidence-meta{color:#657389;font-size:.72rem;margin:4px 0 9px}.evidence-text{color:#aeb9c9;font-size:.82rem;line-height:1.55}
-.footer{color:#4e5b6e;text-align:center;font-size:.72rem;margin-top:42px;padding-top:18px;border-top:1px solid #182131}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+.stApp { 
+    background: linear-gradient(135deg, #0f0e1a 0%, #1a1028 50%, #0f0e1a 100%);
+    color: #e0e7ff;
+}
+[data-testid="stHeader"] { background: transparent; }
+[data-testid="stDecoration"] { display: none; }
+.block-container { 
+    max-width: 1200px; 
+    padding-top: 2rem; 
+    padding-bottom: 3rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
+
+/* TOPBAR & BRANDING */
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+}
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.logo {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    font-size: 28px;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+}
+.brand-title {
+    color: #f1f5f9;
+    font-size: 1.8rem;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+}
+.brand-subtitle {
+    color: #94a3b8;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+    font-weight: 500;
+}
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #4ade80;
+    border-radius: 999px;
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* HERO SECTION */
+.hero {
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 24px;
+    padding: 3rem 2.5rem;
+    background: linear-gradient(135deg, 
+        rgba(99, 102, 241, 0.08) 0%,
+        rgba(168, 85, 247, 0.05) 50%,
+        rgba(59, 130, 246, 0.08) 100%
+    );
+    backdrop-filter: blur(10px);
+    margin-bottom: 2.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(168, 85, 247, 0.15), transparent);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.hero-kicker {
+    color: #a78bfa;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 800;
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: rgba(168, 85, 247, 0.1);
+    border-radius: 999px;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+.hero-title {
+    color: #ffffff;
+    font-size: 2.8rem;
+    line-height: 1.1;
+    font-weight: 900;
+    letter-spacing: -1px;
+    margin-top: 1rem;
+    background: linear-gradient(120deg, #ffffff, #e0e7ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.hero-text {
+    color: #b4c7e7;
+    font-size: 1.1rem;
+    line-height: 1.8;
+    max-width: 800px;
+    margin-top: 1rem;
+    font-weight: 500;
+}
+
+/* SECTIONS */
+.section-title {
+    color: #f1f5f9;
+    font-size: 1.3rem;
+    font-weight: 900;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.section-text {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+    font-weight: 500;
+}
+
+/* INPUTS */
+div[data-testid="stTextArea"] textarea {
+    background: rgba(15, 14, 26, 0.8) !important;
+    border: 1.5px solid rgba(99, 102, 241, 0.2) !important;
+    border-radius: 14px !important;
+    color: #e0e7ff !important;
+    font-size: 0.95rem !important;
+    font-family: 'Segoe UI', sans-serif !important;
+    transition: all 0.2s ease !important;
+}
+div[data-testid="stTextArea"] textarea::placeholder {
+    color: #64748b !important;
+}
+div[data-testid="stTextArea"] textarea:focus {
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+    background: rgba(15, 14, 26, 1) !important;
+}
+
+/* BUTTONS */
+div.stButton > button, div.stLinkButton > a {
+    border-radius: 12px !important;
+    min-height: 48px !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    transition: all 0.3s ease !important;
+    letter-spacing: 0.3px !important;
+}
+div.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #6366f1, #a855f7) !important;
+    border: 0 !important;
+    color: white !important;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+}
+div.stButton > button[kind="primary"]:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+}
+div.stButton > button[kind="secondary"] {
+    border: 1.5px solid rgba(99, 102, 241, 0.3) !important;
+    color: #e0e7ff !important;
+    background: transparent !important;
+}
+
+/* PIPELINE */
+.pipeline-box {
+    background: rgba(15, 14, 26, 0.6);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 20px;
+    padding: 2rem;
+    margin: 1.5rem 0 2rem;
+    backdrop-filter: blur(10px);
+}
+.pipeline-heading {
+    color: #f1f5f9;
+    font-size: 1.15rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.stage {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    margin: 0.5rem 0;
+    border-radius: 12px;
+    border: 1px solid rgba(99, 102, 241, 0.1);
+    background: rgba(30, 27, 45, 0.8);
+    transition: all 0.2s ease;
+}
+.stage:hover {
+    background: rgba(30, 27, 45, 1);
+    border-color: rgba(99, 102, 241, 0.2);
+}
+.stage-icon {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.85rem;
+}
+.done .stage-icon {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+}
+.active .stage-icon {
+    background: rgba(99, 102, 241, 0.3);
+    color: #818cf8;
+    animation: pulse 1.5s infinite;
+}
+.waiting .stage-icon {
+    background: rgba(71, 85, 105, 0.2);
+    color: #94a3b8;
+}
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+.stage-body { flex: 1; }
+.stage-name {
+    color: #e0e7ff;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+.stage-message {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    margin-top: 0.35rem;
+    font-weight: 500;
+}
+.stage-status {
+    color: #64748b;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* METRICS */
+.metric {
+    background: rgba(30, 27, 45, 0.8);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    border-radius: 16px;
+    padding: 1.75rem;
+    min-height: 130px;
+    transition: all 0.2s ease;
+}
+.metric:hover {
+    border-color: rgba(99, 102, 241, 0.3);
+    background: rgba(30, 27, 45, 1);
+}
+.metric-label {
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+.metric-value {
+    color: #f8fafc;
+    font-size: 2.2rem;
+    font-weight: 900;
+    margin-top: 0.75rem;
+}
+.metric-help {
+    color: #64748b;
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+}
+
+/* RISK LEVEL */
+.risk {
+    border-radius: 16px;
+    padding: 1.5rem 2rem;
+    text-align: center;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    margin: 1.5rem 0;
+    border: 2px solid;
+    font-size: 1.1rem;
+}
+.low {
+    color: #4ade80;
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.3);
+}
+.medium {
+    color: #fbbf24;
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.3);
+}
+.high {
+    color: #fb7185;
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+.critical {
+    color: #fca5a5;
+    background: rgba(220, 38, 38, 0.12);
+    border-color: rgba(220, 38, 38, 0.3);
+}
+.unknown {
+    color: #cbd5e1;
+    background: rgba(100, 116, 139, 0.12);
+    border-color: rgba(100, 116, 139, 0.3);
+}
+
+/* CONTENT CARDS */
+.content-card {
+    background: rgba(30, 27, 45, 0.8);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    border-radius: 16px;
+    padding: 1.75rem;
+    color: #cbd5e1;
+    line-height: 1.8;
+    font-size: 0.95rem;
+}
+
+/* MODULES */
+.module {
+    background: rgba(30, 27, 45, 0.8);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin: 0.75rem 0;
+    color: #e0e7ff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+.module:hover {
+    border-color: rgba(99, 102, 241, 0.3);
+}
+.module-score {
+    color: #a78bfa;
+    font-weight: 800;
+    font-size: 1rem;
+}
+
+/* EVIDENCE */
+.evidence {
+    background: rgba(30, 27, 45, 0.8);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    transition: all 0.2s ease;
+}
+.evidence:hover {
+    border-color: rgba(99, 102, 241, 0.3);
+    background: rgba(30, 27, 45, 1);
+}
+.evidence-title {
+    color: #e7edf5;
+    font-weight: 800;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.evidence-meta {
+    color: #64748b;
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.evidence-text {
+    color: #cbd5e1;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    margin-top: 0.75rem;
+}
+
+/* FOOTER */
+.footer {
+    color: #64748b;
+    text-align: center;
+    font-size: 0.85rem;
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(99, 102, 241, 0.1);
+    font-weight: 500;
+}
+
+/* TABS */
+button[data-baseweb="tab"] {
+    color: #94a3b8 !important;
+    border-bottom: 2px solid transparent !important;
+    border-radius: 8px 8px 0 0 !important;
+}
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: #6366f1 !important;
+    border-bottom-color: #6366f1 !important;
+}
+
+/* EXPANDER */
+.streamlit-expanderHeader {
+    background: transparent !important;
+}
+div[data-testid="stExpander"] {
+    border: 1px solid rgba(99, 102, 241, 0.2) !important;
+    border-radius: 12px !important;
+    background: rgba(30, 27, 45, 0.8) !important;
+}
+
+/* PROGRESS BAR */
+.stProgress > div > div {
+    background: linear-gradient(90deg, #6366f1, #a855f7) !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -75,10 +476,7 @@ def metric(label,value,note):
     st.markdown(f'<div class="metric"><div class="metric-label">{esc(label)}</div><div class="metric-value">{esc(value)}</div><div class="metric-help">{esc(note)}</div></div>',unsafe_allow_html=True)
 
 def render_header():
-    a,b=st.columns([4,1])
-    with a:
-        st.markdown('<div class="topbar"><div class="brand"><div class="logo">🛡️</div><div><div class="brand-title">TruthGuard</div><div class="brand-subtitle">AI response verification & hallucination detection</div></div></div></div>',unsafe_allow_html=True)
-    with b: st.markdown('<div style="text-align:right;margin-top:8px"><span class="online">● System Ready</span></div>',unsafe_allow_html=True)
+    st.markdown('<div class="topbar"><div class="brand"><div class="logo">🛡️</div><div><div class="brand-title">TruthGuard</div><div class="brand-subtitle">AI response verification & hallucination detection</div></div></div><div class="status-badge">🟢 System Ready</div></div>',unsafe_allow_html=True)
 
 def render_pipeline(statuses,current=None,p=0,message=""):
     order={k:i for i,(k,_) in enumerate(STAGES)}; ci=order.get(current,-1); rows=[]
@@ -92,39 +490,56 @@ def render_pipeline(statuses,current=None,p=0,message=""):
     st.progress(max(0,min(100,int(p)))/100)
 
 def render_results(r):
-    st.markdown('<div class="section-title">Verification Result</div>',unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📊 Verification Result</div>',unsafe_allow_html=True)
     risk=str(r.get("risk_level","unknown")).lower()
     if risk not in {"low","medium","high","critical"}: risk="unknown"
-    st.markdown(f'<div class="risk {risk}">{"✓" if risk=="low" else "⚠"} {risk.upper()} HALLUCINATION RISK</div>',unsafe_allow_html=True)
-    a,b,c=st.columns(3)
-    with a: metric("Truth Score",pct(r.get("truth_score")),"Higher is better")
-    with b: metric("Confidence",pct(r.get("confidence_score")),"Combined confidence")
-    with c: metric("Hallucination Probability",pct(r.get("hallucination_probability")),"Lower is better")
+    risk_icons = {"low": "✓", "medium": "⚡", "high": "⚠", "critical": "🚨", "unknown": "❓"}
+    st.markdown(f'<div class="risk {risk}">{risk_icons.get(risk, "?")} {risk.upper()} HALLUCINATION RISK</div>',unsafe_allow_html=True)
+    
+    col1,col2,col3=st.columns(3)
+    with col1: metric("Truth Score",pct(r.get("truth_score")),"Higher indicates more truthfulness")
+    with col2: metric("Confidence",pct(r.get("confidence_score")),"Combined module confidence")
+    with col3: metric("Hallucination Risk",pct(r.get("hallucination_probability")),"Lower is safer")
+    
     response=r.get("response") or r.get("generated_response","")
-    st.markdown('<div class="section-title">AI Response</div>',unsafe_allow_html=True)
+    st.markdown('<div class="section-title">💬 AI Response</div>',unsafe_allow_html=True)
     st.markdown(f'<div class="content-card">{esc(response).replace(chr(10),"<br>")}</div>',unsafe_allow_html=True)
-    st.markdown('<div class="section-title">Why TruthGuard gave this result</div>',unsafe_allow_html=True)
+    
+    st.markdown('<div class="section-title">🔍 Analysis & Explanation</div>',unsafe_allow_html=True)
     st.markdown(f'<div class="content-card">{esc(r.get("explanation","No explanation available.")).replace(chr(10),"<br>")}</div>',unsafe_allow_html=True)
-    if r.get("grounding_explanation"): st.info(r["grounding_explanation"])
-    st.markdown('<div class="section-title">Detection Modules</div>',unsafe_allow_html=True)
+    if r.get("grounding_explanation"): 
+        st.markdown(f'<div style="background:rgba(34,197,94,.1);border-left:4px solid #4ade80;border-radius:8px;padding:1rem;margin:1rem 0;color:#cbd5e1">{esc(r["grounding_explanation"]).replace(chr(10),"<br>")}</div>',unsafe_allow_html=True)
+    
+    st.markdown('<div class="section-title">🧠 Detection Modules</div>',unsafe_allow_html=True)
     for name,key in [("Black-box Consistency","blackbox"),("White-box Token Confidence","whitebox"),("LLM-as-a-Judge","judge"),("External Grounding","grounding")]:
         v=score((r.get("module_scores") or {}).get(key))
-        if v is None: st.markdown(f'<div class="module">{name}<span class="module-score">Unavailable</span></div>',unsafe_allow_html=True)
+        if v is None: 
+            st.markdown(f'<div class="module"><span>{name}</span><span class="module-score">Unavailable</span></div>',unsafe_allow_html=True)
         else:
-            st.markdown(f'<div class="module">{name}<span class="module-score">{v*100:.1f}%</span></div>',unsafe_allow_html=True); st.progress(v)
-    if r.get("veto_applied"): st.warning(f'Safety veto applied: {r.get("veto_reason","Unknown reason")}')
-    st.markdown('<div class="section-title">Evidence & Sources</div>',unsafe_allow_html=True)
+            st.markdown(f'<div class="module"><span>{name}</span><span class="module-score">{v*100:.1f}%</span></div>',unsafe_allow_html=True)
+            st.progress(v)
+    
+    if r.get("veto_applied"): 
+        st.markdown(f'<div style="background:rgba(239,68,68,.1);border-left:4px solid #fb7185;border-radius:8px;padding:1rem;margin:1rem 0;color:#fca5a5;font-weight:700">🛑 Safety Veto Applied: {r.get("veto_reason","Unknown reason")}</div>',unsafe_allow_html=True)
+    
+    st.markdown('<div class="section-title">📚 Evidence & Sources</div>',unsafe_allow_html=True)
     evidence=r.get("evidence") or []; sources=r.get("sources") or []
     for i,e in enumerate(evidence,1):
-        st.markdown(f'<div class="evidence"><div class="evidence-title">🔎 {i}. {esc(e.get("title","Untitled source"))}</div><div class="evidence-meta">{esc(e.get("source","Unknown source"))}</div><div class="evidence-text">{esc(e.get("snippet","No evidence snippet available."))}</div></div>',unsafe_allow_html=True)
-        if e.get("url"): st.link_button("Open source ↗",e["url"])
+        st.markdown(f'<div class="evidence"><div class="evidence-title">📖 {esc(e.get("title","Untitled source"))}</div><div class="evidence-meta">Source: {esc(e.get("source","Unknown"))}</div><div class="evidence-text">{esc(e.get("snippet","No snippet available."))}</div></div>',unsafe_allow_html=True)
+        if e.get("url"): st.link_button("View Source ↗",e["url"], use_container_width=True)
+    
     for i,s in enumerate(sources,1):
-        if s.get("url"): st.link_button(f'{i}. {s.get("title","Source")} ↗',s["url"])
-    if not evidence and not sources: st.caption("No external sources were returned.")
+        if s.get("url"): st.link_button(f'📌 Source {i}: {s.get("title","Source")}',s["url"], use_container_width=True)
+    
+    if not evidence and not sources: 
+        st.markdown('<div style="text-align:center;color:#64748b;padding:2rem">📋 No external sources were retrieved for this verification.</div>',unsafe_allow_html=True)
+    
     if r.get("regeneration_triggered"):
-        st.markdown('<div class="section-title">🔄 Safer Regenerated Response</div>',unsafe_allow_html=True)
-        if r.get("regenerated_response"): st.markdown(f'<div class="content-card">{esc(r["regenerated_response"]).replace(chr(10),"<br>")}</div>',unsafe_allow_html=True)
-        if r.get("regeneration_explanation"): st.info(r["regeneration_explanation"])
+        st.markdown('<div class="section-title">✨ Regenerated Safer Response</div>',unsafe_allow_html=True)
+        if r.get("regenerated_response"): 
+            st.markdown(f'<div class="content-card">{esc(r["regenerated_response"]).replace(chr(10),"<br>")}</div>',unsafe_allow_html=True)
+        if r.get("regeneration_explanation"): 
+            st.markdown(f'<div style="background:rgba(168,85,247,.1);border-left:4px solid #a78bfa;border-radius:8px;padding:1rem;margin:1rem 0;color:#cbd5e1">{esc(r["regeneration_explanation"]).replace(chr(10),"<br>")}</div>',unsafe_allow_html=True)
 
 def stream_verify(backend,prompt,regenerate):
     area=st.empty(); statuses={}; current=None; msg="Starting verification..."; p=0; final=None
@@ -165,14 +580,8 @@ def main():
     render_header()
     st.markdown('<div class="hero"><div class="hero-kicker">AI Trust & Verification</div><div class="hero-title">Verify before you trust.</div><div class="hero-text">TruthGuard checks AI-generated responses using consistency analysis, external evidence, independent judging and score fusion. See exactly what happens at every stage.</div></div>',unsafe_allow_html=True)
 
-    with st.expander("⚙️ Connection settings",expanded=False):
-        backend=st.text_input("FastAPI backend URL",value="http://localhost:8000")
-        if st.button("Check backend"):
-            try:
-                h=requests.get(f"{backend.rstrip('/')}/health",timeout=5)
-                st.success("TruthGuard backend is online.") if h.ok else st.warning(f"Backend returned HTTP {h.status_code}.")
-            except: st.error("Backend is not reachable.")
-
+    backend="http://localhost:8000"
+    
     st.markdown('<div class="section-title">Choose how you want to verify</div>',unsafe_allow_html=True)
     t1,t2=st.tabs(["🔍 Verify an Existing AI Response","✨ Generate & Verify"])
 
