@@ -151,36 +151,49 @@ async def generate_and_verify_stream(request: GenerateAndVerifyRequest):
 
     async def event_stream():
         progress_queue = asyncio.Queue()
+        loop = asyncio.get_running_loop()
 
         def progress_callback(stage: str, message: str, progress: int):
-            progress_queue.put_nowait({
+            event = {
                 "type": "progress",
                 "stage": stage,
                 "message": message,
-                "progress": progress
-            })
+                "progress": progress,
+            }
+
+            # Thread-safe communication from pipeline worker → async loop
+            loop.call_soon_threadsafe(
+                progress_queue.put_nowait,
+                event
+            )
 
         task = asyncio.create_task(
             asyncio.to_thread(
                 pipeline.generate_and_verify,
                 request.prompt,
                 request.regenerate,
-                progress_callback
+                progress_callback,
             )
         )
 
+        # Keep the HTTP stream alive while the pipeline is running.
         while not task.done():
             try:
                 event = await asyncio.wait_for(
                     progress_queue.get(),
-                    timeout=0.25
+                    timeout=5.0,
                 )
 
                 yield json.dumps(event) + "\n"
 
             except asyncio.TimeoutError:
-                continue
+                # Heartbeat prevents Render/proxies from considering
+                # the streaming connection idle.
+                yield json.dumps({
+                    "type": "heartbeat"
+                }) + "\n"
 
+        # Send any progress events that arrived just before completion.
         while not progress_queue.empty():
             event = await progress_queue.get()
             yield json.dumps(event) + "\n"
@@ -205,25 +218,29 @@ async def generate_and_verify_stream(request: GenerateAndVerifyRequest):
                 "regeneration_triggered": result.regeneration_triggered,
                 "regeneration_explanation": result.regeneration_explanation,
                 "veto_applied": result.veto_applied,
-                "veto_reason": result.veto_reason
+                "veto_reason": result.veto_reason,
             }
 
             yield json.dumps({
                 "type": "complete",
-                "result": final_result
+                "result": final_result,
             }) + "\n"
 
         except Exception as e:
             yield json.dumps({
                 "type": "error",
-                "message": str(e)
+                "message": str(e),
             }) + "\n"
 
     return StreamingResponse(
         event_stream(),
-        media_type="application/x-ndjson"
+        media_type="application/x-ndjson",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
-
 @app.post("/generate-and-verify", response_model=GenerateAndVerifyResponse, tags=["Verification"])
 async def generate_and_verify(request: GenerateAndVerifyRequest):
     """
