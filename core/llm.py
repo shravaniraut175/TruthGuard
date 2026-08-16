@@ -1,13 +1,18 @@
 # TruthGuard LLM Provider Module
 """LLM provider abstraction for multiple backends."""
 
+from enum import auto
 import os
 from abc import ABC, abstractmethod
 from typing import Optional
 
 from click import prompt
 
+from pathlib import types
+
 from .config import settings
+from google import genai
+
 
 
 class BaseLLMProvider(ABC):
@@ -107,8 +112,13 @@ class GoogleGeminiProvider(BaseLLMProvider):
             response = self.client.models.generate_content(
                 model=self.model_name,
                 contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=temperature,
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                        disable=True
+                    )
+                )
             )
-
             return response.text or ""
 
         except Exception as e:
@@ -129,9 +139,12 @@ class GoogleGeminiProvider(BaseLLMProvider):
             response = self.client.models.generate_content(
                 model=self.model_name,
                 contents=prompt_with_json_instruction,
-                config={
-                    "response_mime_type": "application/json",
-                }
+                config=types.GenerateContentConfig(
+                    temperature=temperature,
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                        disable=True
+                    )
+                )       
             )
 
             content = response.text or ""
