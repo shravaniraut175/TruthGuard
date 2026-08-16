@@ -107,9 +107,6 @@ class GoogleGeminiProvider(BaseLLMProvider):
             response = self.client.models.generate_content(
                 model=self.model_name,
                 contents=prompt,
-                config={
-                    "temperature": temperature,
-                }
             )
 
             return response.text or ""
@@ -133,7 +130,6 @@ class GoogleGeminiProvider(BaseLLMProvider):
                 model=self.model_name,
                 contents=prompt_with_json_instruction,
                 config={
-                    "temperature": temperature,
                     "response_mime_type": "application/json",
                 }
             )
